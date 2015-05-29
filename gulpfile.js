@@ -90,6 +90,7 @@ gulp.task('default', function() {
                 ['templates:watch'],
                 ['scripts'],
                 ['scripts:watch'],
-                ['server']
+                ['server'],
+                ['jsdoc']
     );
 });

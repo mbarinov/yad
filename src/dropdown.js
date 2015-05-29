@@ -10,15 +10,14 @@ var DROPDOWN_INPUT_CLASS = 'dropdown__input',
     TAB_KEYCODE = 9,
     UP_KEYCODE = 38,
     DOWN_KEYCODE = 40,
-    TIMEOUT = 200;
+    TIMEOUT = 200,
+    SEARCH_FIELD = 'name';
 /**
  * Contructor for - Yet another dropdown.
  * @param {Object} params - Parameters for constructor
  * @param {String} params.el - Selector for dropdown element
  * @param {Function} params.dataSource - Data source for remote server
  * @param {Array} params.cachedResourses - Cached resouses
- * @param {String} params.property - Property in the cached resourse for search
- * @param {Boolean} params.multiple - Is multiple
  * @param {Function} params.onSelect - Invokes on select
  * @return {Object} - Dropdown instance
  * @constructor
@@ -150,7 +149,7 @@ YAD.prototype._onSearch = function (str) {
             });
 
             self.items = self._uniqueBy(self.items, function (x) {
-                return x[self.params.property];
+                return x[SEARCH_FIELD];
             });
 
             if (self.$el.find(DROPDOWN_INPUT_SELECTOR).val() === str) {
@@ -233,7 +232,7 @@ YAD.prototype._searchHandler = function (str) {
         self = this;
 
     cachedResources.forEach(function (resource) {
-        var words = resource[self.params.property].toLowerCase().trim().split(" ");
+        var words = resource[SEARCH_FIELD].toLowerCase().trim().split(" ");
 
         words.forEach(function (word) {
             var twice = false;
@@ -257,7 +256,7 @@ YAD.prototype._searchHandler = function (str) {
     result = fullMatch.length ? fullMatch : result;
 
     result = this._uniqueBy(result, function (x) {
-        return x[self.params.property];
+        return x[SEARCH_FIELD];
     });
 
     return result;
@@ -376,7 +375,7 @@ YAD.prototype._renderList = function (items) {
         return false;
     }
 
-    $list = $(YAD.templates.dropdown({items: items, prop: this.params.property}));
+    $list = $(YAD.templates.dropdown({items: items, avatars: this.params.avatars}));
 
     this._dispatchListEvents($list);
     this.$el.append($list);
@@ -505,7 +504,7 @@ YAD.prototype._navHandler = function (e) {
             return false;
         }
 
-        if (!e.shiftKey || !this.params.multiple) {
+        if (!e.shiftKey) {
             $items.removeClass('active');
         }
 

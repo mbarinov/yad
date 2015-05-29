@@ -25,9 +25,8 @@
     </div>
     <pre>var dropdown = new YAD({
         el: '#vk-dropdown',
-        multiple: false,
+        avatars: false,
         cachedResourses: cachedData,
-        property: 'name',
         dataSource: (function () {
             return function (str) {
                 var dfd = Q.defer();
@@ -40,6 +39,7 @@
         onSelect: function (data) {
             console.log(data);
         }
+    });
     });</pre>
 
     <br>
@@ -53,9 +53,8 @@
     </div>
     <pre>var dropdown2 = new YAD({
         el: '#vk-dropdown2',
-        multiple: true,
+        avatars: true,
         cachedResourses: cachedData,
-        property: 'name',
         dataSource: YAD.getData('https://vk.com/api'),
         onSelect: function (data) {
             console.log(data);
@@ -69,24 +68,31 @@
 <script>
     var cachedData = [
         {
-            name: 'Max Barinov'
+            name: 'Max Barinov',
+            sub: '',
+            thumb: 'https://pp.vk.me/c623831/v623831143/294b/MhG6Y5jxzig.jpg'
         },
         {
-            name: 'Георгий Лобушкин'
+            name: 'Георгий Лобушкин',
+            sub: 'СПбГУ',
+            thumb: 'https://pp.vk.me/c620326/v620326420/1c09c/GJBIA-Vuzi4.jpg'
         },
         {
-            name: 'Вадим Дорохов'
+            name: 'Вадим Дорохов',
+            sub: 'СПбГУ',
+            thumb: 'https://pp.vk.me/c620020/v620020520/1d623/YHYSqVj6pio.jpg'
         },
         {
-            name: 'Андрей Рогозов'
+            name: 'Андрей Рогозов',
+            sub: '',
+            thumb: 'https://pp.vk.me/c622816/v622816492/13347/FFvGMn-CVkQ.jpg'
         }
     ];
 
     var dropdown = new YAD({
         el: '#vk-dropdown',
-        multiple: false,
+        avatars: false,
         cachedResourses: cachedData,
-        property: 'name',
         dataSource: (function () {
             return function (str) {
                 var dfd = Q.defer();
@@ -103,9 +109,8 @@
 
     var dropdown2 = new YAD({
         el: '#vk-dropdown2',
-        multiple: true,
+        avatars: true,
         cachedResourses: cachedData,
-        property: 'name',
         dataSource: YAD.getData('https://vk.com/api'),
         onSelect: function (data) {
             console.log(data);
