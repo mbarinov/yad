@@ -1,6 +1,9 @@
-var DROPDOWN_INPUT_CLASS = '.dropdown__input',
-    DROPDOWN_INNER_CLASS = '.dropdown__inner',
-    DROPDOWN_ITEM_CLASS = '.dropdown__item',
+var DROPDOWN_INPUT_CLASS = 'dropdown__input',
+    DROPDOWN_INPUT_SELECTOR = '.' + DROPDOWN_INPUT_CLASS,
+    DROPDOWN_INNER_CLASS = 'dropdown__inner',
+    DROPDOWN_INNER_SELECTOR = '.' + DROPDOWN_INNER_CLASS,
+    DROPDOWN_ITEM_CLASS = 'dropdown__item',
+    DROPDOWN_ITEM_SELECTOR = '.' + DROPDOWN_ITEM_CLASS,
     DROPDOWN_ITEM_CLASS_ACTIVE = 'active',
     ESC_KEYCODE = 27,
     ENTER_KEYCODE = 13,
@@ -82,9 +85,9 @@ YAD.getData = function (url) {
  */
 YAD.prototype._dispatchEvents = function () {
     var self = this,
-        $input = this.$el.find(DROPDOWN_INPUT_CLASS);
+        $input = this.$el.find(DROPDOWN_INPUT_SELECTOR);
 
-    this.$el.find(DROPDOWN_INPUT_CLASS)
+    this.$el.find(DROPDOWN_INPUT_SELECTOR)
         .on('focus', function () {
             self._onSearch($input.val());
         })
@@ -122,7 +125,7 @@ YAD.prototype._remove = function () {
     this.activeItems = [];
 
     if (this.$el) {
-        this.$el.find(DROPDOWN_INNER_CLASS).remove();
+        this.$el.find(DROPDOWN_INNER_SELECTOR).remove();
     }
 
     $(document).off('keydown._navHandler');
@@ -150,7 +153,7 @@ YAD.prototype._onSearch = function (str) {
                 return x[self.params.property];
             });
 
-            if (self.$el.find(DROPDOWN_INPUT_CLASS).val() === str) {
+            if (self.$el.find(DROPDOWN_INPUT_SELECTOR).val() === str) {
                 var items = self.items.slice();
                 self._remove();
                 self.items = items;
@@ -286,6 +289,7 @@ YAD.prototype._parseLatin = function (text) {
  * Parse cyrillic to latin.
  * @param {String} text - Cyrillic string
  * @returns {String} outtext - Latin string on null
+ * @private
  */
 YAD.prototype._parseCyr = function parseCyr(text) {
     var outtext = text, i,
@@ -389,12 +393,12 @@ YAD.prototype._renderList = function (items) {
  */
 YAD.prototype._dispatchListEvents = function ($list) {
     var self = this,
-        $items = $list.find(DROPDOWN_ITEM_CLASS);
+        $items = $list.find(DROPDOWN_ITEM_SELECTOR);
 
     $items
         .on('click', function (e) {
             var itemIndex = $(e.target)
-                    .parent(DROPDOWN_ITEM_CLASS)
+                    .parent(DROPDOWN_ITEM_SELECTOR)
                     .index(),
                 item = self.items[itemIndex];
 
@@ -404,8 +408,8 @@ YAD.prototype._dispatchListEvents = function ($list) {
         .on('mouseover', function (e) {
 
             var $item = $(e.target)
-                    .parent(DROPDOWN_ITEM_CLASS),
-                itemIndex = self.$el.find(DROPDOWN_ITEM_CLASS).index($item);
+                    .parent(DROPDOWN_ITEM_SELECTOR),
+                itemIndex = self.$el.find(DROPDOWN_ITEM_SELECTOR).index($item);
 
             if (itemIndex !== -1) {
                 var item = self.items[itemIndex];
@@ -427,7 +431,7 @@ YAD.prototype._dispatchListEvents = function ($list) {
  */
 YAD.prototype._setActiveItems = function (items) {
     var self = this;
-    var $items = this.$el.find(DROPDOWN_ITEM_CLASS);
+    var $items = this.$el.find(DROPDOWN_ITEM_SELECTOR);
 
     if ($items.length) {
         $items.each(function (__, _item) {
@@ -492,7 +496,7 @@ YAD.prototype._navHandler = function (e) {
         e.preventDefault();
         var self = this,
             result = [],
-            $items = this.$el.find(DROPDOWN_INNER_CLASS).children('.' + DROPDOWN_ITEM_CLASS_ACTIVE),
+            $items = this.$el.find(DROPDOWN_INNER_SELECTOR).children('.' + DROPDOWN_ITEM_CLASS_ACTIVE),
             $prev = $items.prev(),
             $next = $items.next(),
             $siblings;
@@ -513,7 +517,7 @@ YAD.prototype._navHandler = function (e) {
             $next.addClass(DROPDOWN_ITEM_CLASS_ACTIVE);
         }
 
-        $items = this.$el.find(DROPDOWN_INNER_CLASS).children();
+        $items = this.$el.find(DROPDOWN_INNER_SELECTOR).children();
         $siblings = $items.siblings('.' + DROPDOWN_ITEM_CLASS_ACTIVE);
 
         $siblings.each(function (i, s) {

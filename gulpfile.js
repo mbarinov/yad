@@ -21,8 +21,12 @@ var scriptsPaths = [
 
 gulp.task('jsdoc', function () {
     gulp.src("src/*.js")
-    .pipe(jsdoc('./documentation-output'))
-})
+    .pipe(jsdoc('./docs',null,null,{
+            showPrivate: true,
+            cleverLinks: true,
+            outputSourceFiles: true
+        }))
+});
 
 gulp.task('scripts', function () {
    gulp.src(scriptsPaths)
