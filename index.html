@@ -16,13 +16,7 @@
     <h2>Github</h2>
 </a>
 <div class="test" style="width:400px; margin: 0 auto">
-    <div class="dropdown"
-         id="vk-dropdown">
-
-        <input class="dropdown__input" type="text" placeholder="Введите текст">
-
-        <div class="clear"></div>
-    </div>
+    <div id="vk-dropdown"></div>
     <pre>var dropdown = new YAD({
         el: '#vk-dropdown',
         avatars: false,
@@ -37,27 +31,21 @@
             }
         }()),
         onSelect: function (data) {
-            console.log(data);
+            alert(JSON.stringify(data));
         }
     });
     });</pre>
 
     <br>
     <br>
-    <div class="dropdown"
-         id="vk-dropdown2">
-
-        <input class="dropdown__input" type="text" value="кщпщ" placeholder="Введите текст">
-
-        <div class="clear"></div>
-    </div>
+    <div id="vk-dropdown2"></div>
     <pre>var dropdown2 = new YAD({
         el: '#vk-dropdown2',
         avatars: true,
         cachedResourses: cachedData,
         dataSource: YAD.getData('https://vk.com/api'),
         onSelect: function (data) {
-            console.log(data);
+            alert(JSON.stringify(data));
         }
     });
     </pre>
@@ -103,7 +91,7 @@
             }
         }()),
         onSelect: function (data) {
-            console.log(data);
+            alert(JSON.stringify(data));
         }
     });
 
@@ -113,7 +101,7 @@
         cachedResourses: cachedData,
         dataSource: YAD.getData('https://vk.com/api'),
         onSelect: function (data) {
-            console.log(data);
+            alert(JSON.stringify(data));
         }
     });
 

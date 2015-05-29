@@ -28,7 +28,6 @@ function YAD(params) {
     this.selectedItems = [];
     this.items = [];
 
-
     if (this.params === undefined) {
         throw new Error('Element, cachedResourses and dataSource are required.');
     }
@@ -36,6 +35,11 @@ function YAD(params) {
     if (!this.$el && !this._isFunction(this.params.dataSource)) {
         throw new Error('Element should be exist and dataSource should be function.');
     }
+
+    var $input = $(YAD.templates.input());
+    this.$el
+        .addClass('dropdown')
+        .html($input);
 
     this.dataSource = this._throttle(function () {
         return this.params.dataSource.apply(this, arguments);

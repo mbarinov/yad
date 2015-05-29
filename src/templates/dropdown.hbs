@@ -1,0 +1,8 @@
+<div class="dropdown__inner">
+    {{#items}}
+        {{> item avatars=../avatars }}
+    {{/items}}
+    {{^items}}
+    <div class="dropdown__item">No data</div>
+    {{/items}}
+</div>

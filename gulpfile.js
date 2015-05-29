@@ -10,7 +10,9 @@ var gulp = require('gulp'),
     stripDebug = require('gulp-strip-debug'),
     uglify = require('gulp-uglify'),
     concat = require('gulp-concat'),
-    jsdoc = require("gulp-jsdoc");
+    jsdoc = require("gulp-jsdoc"),
+    path = require('path'),
+    merge = require('merge-stream');
 
 var scriptsPaths = [
     'src/**/*.js',
@@ -30,7 +32,7 @@ gulp.task('jsdoc', function () {
 
 gulp.task('scripts', function () {
    gulp.src(scriptsPaths)
-    .pipe(stripDebug())
+    //.pipe(stripDebug())
     .pipe(uglify())
     .pipe(concat('yad.js'))
     .pipe(gulp.dest('dist'));
@@ -41,13 +43,25 @@ gulp.task('scripts:watch', function () {
 });
 
 gulp.task('templates', function(){
-    gulp.src('src/**/*.hbs')
+    var partials = gulp.src(['src/templates/_*.hbs'])
+        .pipe(handlebars())
+        .pipe(wrap('Handlebars.registerPartial(<%= processPartialName(file.relative) %>, Handlebars.template(<%= contents %>));', {}, {
+            imports: {
+                processPartialName: function(fileName) {
+                    return JSON.stringify(path.basename(fileName, '.js').substr(1));
+                }
+            }
+        }));
+
+    var templates = gulp.src('src/templates/[^_]*.hbs')
         .pipe(handlebars())
         .pipe(wrap('Handlebars.template(<%= contents %>)'))
         .pipe(declare({
             namespace: 'YAD.templates',
             noRedeclare: true
-        }))
+        }));
+
+    return merge(partials, templates)
         .pipe(concat('templates.js'))
         .pipe(gulp.dest('dist'));
 });
