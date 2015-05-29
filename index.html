@@ -53,6 +53,7 @@
 <a class="author" href="http://mbarinov.github.io/">
     <span>by Max</span>
 </a>
+<img src="http://static33.cmtt.ru/paper-media/fd/92/e5/0479e08f8e852d.png" id="wow">
 <script>
     var cachedData = [
         {
@@ -92,6 +93,7 @@
         }()),
         onSelect: function (data) {
             alert(JSON.stringify(data));
+            $('#wow').addClass('active');
         }
     });
 
@@ -102,6 +104,7 @@
         dataSource: YAD.getData('https://vk.com/api'),
         onSelect: function (data) {
             alert(JSON.stringify(data));
+            $('#wow').addClass('active');
         }
     });
 
@@ -137,6 +140,24 @@
 
     .author:visited {
         color: grey;
+    }
+
+    #wow {
+        position: fixed;
+        bottom: 0;
+        right: 30px;
+        width: 160px;
+        height: 160px;
+        overflow-y: hidden;
+        max-height: 0;
+
+        transition-property: all;
+        transition-duration: .5s;
+        transition-timing-function: cubic-bezier(0, 1, 0.5, 1);
+    }
+
+    #wow.active {
+        max-height: 160px;
     }
 </style>
 </body>
