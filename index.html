@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>Yet Another Dropdown</title>
+    <link rel="stylesheet" href="dist/dropdown.css">
+    <script src="dist/yad.js"></script>
+    <script src="dist/templates.js"></script>
+</head>
+<body>
+<h1>Yet Another Dropdown</h1>
+
+<div class="test" style="width:400px; margin: 0 auto">
+    <div class="dropdown"
+         id="vk-dropdown">
+
+        <input class="dropdown__input" type="text" placeholder="Введите текст">
+
+        <div class="clear"></div>
+    </div>
+
+    <br>
+    <br>
+    <div class="dropdown"
+         id="vk-dropdown2">
+
+        <input class="dropdown__input" type="text" value="кщпщ" placeholder="Введите текст">
+
+        <div class="clear"></div>
+    </div>
+</div>
+<script>
+    var cachedData = [
+        {
+            name: 'Max Barinov'
+        },
+        {
+            name: 'Георгий Лобушкин'
+        },
+        {
+            name: 'Вадим Дорохов'
+        },
+        {
+            name: 'Андрей Рогозов'
+        }
+    ];
+
+    var dropdown = new YAD({
+        el: '#vk-dropdown',
+        multiple: false,
+        cachedResourses: cachedData,
+        property: 'name',
+        dataSource: (function () {
+            return function (str) {
+                var dfd = Q.defer();
+
+                dfd.resolve([{name: 'response from server'}]);
+
+                return dfd.promise;
+            }
+        }()),
+        onSelect: function (data) {
+            console.log(data);
+        }
+    });
+
+    var dropdown2 = new YAD({
+        el: '#vk-dropdown2',
+        multiple: true,
+        cachedResourses: cachedData,
+        property: 'name',
+        dataSource: YAD.getData('https://vk.com/api'),
+        onSelect: function (data) {
+            console.log(data);
+        }
+    });
+
+</script>
+<style>
+    * {
+        font-family: 'Lucida Grande', Arial, tahoma, verdana, sans-serif;
+    }
+    h1 {
+        text-align: center;
+        color: #45688E;
+    }
+</style>
+</body>
+</html>

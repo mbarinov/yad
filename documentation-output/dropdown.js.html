@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: dropdown.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: dropdown.js</h1>
+
+    
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>var DROPDOWN_INPUT_CLASS = '.dropdown__input',
+    DROPDOWN_INNER_CLASS = '.dropdown__inner',
+    DROPDOWN_ITEM_CLASS = '.dropdown__item',
+    DROPDOWN_ITEM_CLASS_ACTIVE = 'active',
+    ESC_KEYCODE = 27,
+    ENTER_KEYCODE = 13,
+    TAB_KEYCODE = 9,
+    UP_KEYCODE = 38,
+    DOWN_KEYCODE = 40,
+    TIMEOUT = 200;
+/**
+ * Contructor for - Yet another dropdown.
+ * @param {Object} params - Parameters for constructor
+ * @param {String} params.el - Selector for dropdown element
+ * @param {Function} params.dataSource - Data source for remote server
+ * @param {Array} params.cachedResourses - Cached resouses
+ * @param {String} params.property - Property in the cached resourse for search
+ * @param {Boolean} params.multiple - Is multiple
+ * @param {Function} params.onSelect - Invokes on select
+ * @return {Object} - Dropdown instance
+ * @constructor
+ */
+function YAD(params) {
+    this.params = params;
+    this.$el = $(this.params.el);
+    this.selectedItems = [];
+    this.items = [];
+
+
+    if (this.params === undefined) {
+        throw new Error('Element, cachedResourses and dataSource are required.');
+    }
+
+    if (!this.$el &amp;&amp; !this._isFunction(this.params.dataSource)) {
+        throw new Error('Element should be exist and dataSource should be function.');
+    }
+
+    this.dataSource = this._throttle(function () {
+        return this.params.dataSource.apply(this, arguments);
+    }, this.params.timeout || TIMEOUT);
+
+    this._dispatchEvents(this.params.el);
+
+    return this;
+};
+
+/**
+ * Built-in dataSource function for ajax
+ * @param {String} url - Endpoint for search
+ * @returns {Function} - dataSource handler
+ */
+YAD.getData = function (url) {
+
+    return function (str) {
+        var dfd = Q.defer();
+
+        $.ajax({
+            url: url,
+            type: "GET",
+            crossDomain: true,
+            data: {
+                'str': str
+            },
+            dataType: "json",
+            success: function (response) {
+                var resp = JSON.parse(response)
+
+                dfd.resolve([{name: 'response from server'}]);
+            },
+            error: function (xhr, status) {
+                dfd.reject([{name: 'response from server'}]);
+            }
+        });
+
+        return dfd.promise;
+    }
+};
+
+/**
+ * Dispach event for input
+ * @private
+ */
+YAD.prototype._dispatchEvents = function () {
+    var self = this,
+        $input = this.$el.find(DROPDOWN_INPUT_CLASS);
+
+    this.$el.find(DROPDOWN_INPUT_CLASS)
+        .on('focus', function () {
+            self._onSearch($input.val());
+        })
+        .on('keyup', function (e) {
+            if (e.keyCode === ESC_KEYCODE) {
+                self._remove();
+            }
+
+            if (e.keyCode === ENTER_KEYCODE) {
+
+                if (self._isFunction(self.params.onSelect)) {
+                    var items = self.selectedItems.length ? self.selectedItems : self.activeItems;
+
+                    self._remove();
+                    $input.blur();
+                    self.params.onSelect(items || []);
+
+                    return false;
+                }
+            }
+
+            if (e.keyCode !== UP_KEYCODE &amp;&amp; e.keyCode !== DOWN_KEYCODE &amp;&amp; e.keyCode !== 16) {
+                self._onSearch($input.val());
+            }
+
+        });
+};
+
+/**
+ * Remove dropdown
+ * @private
+ */
+YAD.prototype._remove = function () {
+    this.items = [];
+    this.activeItems = [];
+
+    if (this.$el) {
+        this.$el.find(DROPDOWN_INNER_CLASS).remove();
+    }
+
+    $(document).off('keydown._navHandler');
+    $(document).off('click._onCloseHandler');
+};
+
+/**
+ * Inputs search handler
+ * @param {String} str - Search quert
+ * @private
+ */
+YAD.prototype._onSearch = function (str) {
+    var self = this;
+
+    this._remove();
+    this.items = this._search(str);
+
+    if (this._isFunction(this.dataSource) &amp;&amp; str) {
+        this.dataSource(str).then(function (data) {
+            data.forEach(function (i) {
+                self.items.push(i);
+            });
+
+            self.items = self._uniqueBy(self.items, function (x) {
+                return x[self.params.property];
+            });
+
+            if (self.$el.find(DROPDOWN_INPUT_CLASS).val() === str) {
+                var items = self.items.slice();
+                self._remove();
+                self.items = items;
+                self._renderList(self.items);
+            }
+        });
+    }
+
+    this._renderList(this.items);
+};
+
+/**
+ * Invoke cache search
+ * @param {String} str - Search query
+ * @returns {Array} items - Results of the cached search
+ * @private
+ */
+YAD.prototype._search = function (str) {
+    var items;
+
+    if (str) {
+        items = this._searchCache(str);
+    } else {
+        items = this.params.cachedResourses ? this.params.cachedResourses : [];
+    }
+
+    return items;
+};
+
+/**
+ * Cache search
+ * @param {String} query - Search query
+ * @returns {Array} items - Results of the cached search. Include similar query search
+ * @private
+ */
+YAD.prototype._searchCache = function (query) {
+    var result = [],
+        similarQueries,
+        cache = this.params.cachedResourses;
+
+    if (!query || !cache) {
+        return result;
+    }
+
+    similarQueries = this._getSimilarQueries(query);
+
+    for (var i in similarQueries) {
+        if (similarQueries.hasOwnProperty(i)) {
+            var similarQuery = similarQueries[i].toLowerCase(),
+                searchProcess;
+
+            searchProcess = this._searchHandler(similarQuery);
+
+            for (var _i in searchProcess) {
+                if (searchProcess.hasOwnProperty(_i)) {
+                    if (searchProcess[_i]) {
+                        result.push(searchProcess[_i]);
+                    }
+                }
+            }
+        }
+    }
+
+    return result;
+};
+
+/**
+ * Matching
+ * @param {String} str - Search query
+ * @returns {Array} items - Results of the cached search
+ * @private
+ */
+YAD.prototype._searchHandler = function (str) {
+    var cachedResources = this.params.cachedResourses || [],
+        result = [],
+        fullMatch = [],
+        self = this;
+
+    cachedResources.forEach(function (resource) {
+        var words = resource[self.params.property].toLowerCase().trim().split(" ");
+
+        words.forEach(function (word) {
+            var twice = false;
+
+            str.trim().split(" ").forEach(function (s) {
+                if (twice) {
+                    fullMatch.push(resource);
+                    return false;
+                }
+
+                if (word.indexOf(s.trim()) === 0) {
+                    twice = true;
+                    result.push(resource);
+                }
+            });
+
+        });
+
+    });
+
+    result = fullMatch.length ? fullMatch : result;
+
+    result = this._uniqueBy(result, function (x) {
+        return x[self.params.property];
+    });
+
+    return result;
+
+};
+
+/**
+ * Parse latin to cyrillic. Stealed from the common.js
+ * @param {String} text - Latin string
+ * @returns {String} outtext - Cyrillic string or null
+ * @private
+ */
+YAD.prototype._parseLatin = function (text) {
+    var outtext = text;
+    var lat1 = ['yo', 'zh', 'kh', 'ts', 'ch', 'sch', 'shch', 'sh', 'eh', 'yu', 'ya', 'YO', 'ZH', 'KH', 'TS', 'CH', 'SCH', 'SHCH', 'SH', 'EH', 'YU', 'YA', "'"];
+    var rus1 = ['ё', 'ж', 'х', 'ц', 'ч', 'щ', 'щ', 'ш', 'э', 'ю', 'я', 'Ё', 'Ж', 'Х', 'Ц', 'Ч', 'Щ', 'Щ', 'Ш', 'Э', 'Ю', 'Я', 'ь'];
+    for (var i = 0, l = lat1.length; i &lt; l; i++) {
+        outtext = outtext.split(lat1[i]).join(rus1[i]);
+    }
+    var lat2 = 'abvgdezijklmnoprstufhcyABVGDEZIJKLMNOPRSTUFHCYёЁ';
+    var rus2 = 'абвгдезийклмнопрстуфхцыАБВГДЕЗИЙКЛМНОПРСТУФХЦЫеЕ';
+    for (var i = 0, l = lat2.length; i &lt; l; i++) {
+        outtext = outtext.split(lat2.charAt(i)).join(rus2.charAt(i));
+    }
+    return (outtext == text) ? null : outtext;
+};
+
+/**
+ * Parse cyrillic to latin.
+ * @param {String} text - Cyrillic string
+ * @returns {String} outtext - Latin string on null
+ */
+YAD.prototype._parseCyr = function parseCyr(text) {
+    var outtext = text, i,
+        lat1 = ['yo', 'zh', 'kh', 'ts', 'ch', 'sch', 'shch', 'sh', 'eh', 'yu', 'ya', 'YO', 'ZH', 'KH', 'TS', 'CH', 'SCH', 'SHCH', 'SH', 'EH', 'YU', 'YA', "'"],
+        rus1 = ['ё', 'ж', 'х', 'ц', 'ч', 'щ', 'щ', 'ш', 'э', 'ю', 'я', 'Ё', 'Ж', 'Х', 'Ц', 'Ч', 'Щ', 'Щ', 'Ш', 'Э', 'Ю', 'Я', 'ь'],
+        lat2 = 'abvgdezijklmnoprstufhcyABVGDEZIJKLMNOPRSTUFHCYёЁ',
+        rus2 = 'абвгдезийклмнопрстуфхцыАБВГДЕЗИЙКЛМНОПРСТУФХЦЫеЕ';
+    for (i = 0; i &lt; rus1.length; i++) {
+        outtext = outtext.split(rus1[i]).join(lat1[i]);
+    }
+    for (i = 0; i &lt; rus2.length; i++) {
+        outtext = outtext.split(rus2.charAt(i)).join(lat2.charAt(i));
+    }
+    return (outtext == text) ? null : outtext;
+};
+
+/**
+ * Parse latin text to cyrillic by keyboard. Stealed from the common.js
+ * @param {String} text - Latin string
+ * @returns {String} outtext - Cyrillic string on null
+ * @private
+ */
+YAD.prototype._parseLatKeys = function (text) {
+    var outtext = text, i;
+    var lat = "qwertyuiop[]asdfghjkl;'zxcvbnm,./`",
+        rus = "йцукенгшщзхъфывапролджэячсмитьбю.ё";
+    for (i = 0; i &lt; lat.length; i++) {
+        outtext = outtext.split(lat.charAt(i)).join(rus.charAt(i));
+    }
+    return (outtext == text) ? null : outtext;
+};
+
+/**
+ * Parse cyrillic to latin by keyboard.
+ * @param {String} - Cyrillic string
+ * @returns {String} - Latin string or null
+ * @private
+ */
+YAD.prototype._parseCyrKeys = function (text) {
+    var outtext = text, i;
+    var lat = "qwertyuiop[]asdfghjkl;'zxcvbnm,./`",
+        rus = "йцукенгшщзхъфывапролджэячсмитьбю.ё";
+    for (i = 0; i &lt; rus.length; i++) {
+        outtext = outtext.split(rus.charAt(i)).join(lat.charAt(i));
+    }
+
+    outtext = this._parseLatin(outtext)
+    return (outtext == text) ? null : outtext;
+};
+
+/**
+ * Stealed from the common.js and little bit modified. "кщпщ" => "рого" case.
+ * @param {String} - query Search query
+ * @returns {Array} - queries Array of the similar queries
+ * @private
+ */
+YAD.prototype._getSimilarQueries = function (query) {
+    query = query.toLowerCase();
+    var queries = [query], t;
+    if (t = this._parseLatin(query)) queries.push(t);
+    if (t = this._parseLatKeys(query)) queries.push(t);
+    if (t = this._parseCyrKeys(query)) queries.push(t);
+    if (t = this._parseCyr(query)) queries.push(t);
+
+    if(queries) {
+        queries = queries.filter(function (value, index, arr) {
+            return arr.indexOf(value) === index;
+        });
+    }
+
+    return queries;
+};
+
+/**
+ * Render dropdown.
+ * @param {Array} items - Items for render dropdown.
+ * @returns {jQuery} $list - jQuery element of the dropdown
+ * @private
+ */
+YAD.prototype._renderList = function (items) {
+    var $list;
+
+    if (!items) {
+        return false;
+    }
+
+    $list = $(YAD.templates.dropdown({items: items, prop: this.params.property}));
+
+    this._dispatchListEvents($list);
+    this.$el.append($list);
+    this._setActiveItems([this.items[0]]);
+
+    return $list;
+};
+
+/**
+ * Dispatch events for dropdown
+ * @param {jQuery} $list - Dropdown element
+ * @return {void}
+ * @private
+ */
+YAD.prototype._dispatchListEvents = function ($list) {
+    var self = this,
+        $items = $list.find(DROPDOWN_ITEM_CLASS);
+
+    $items
+        .on('click', function (e) {
+            var itemIndex = $(e.target)
+                    .parent(DROPDOWN_ITEM_CLASS)
+                    .index(),
+                item = self.items[itemIndex];
+
+            self._onClickHandler([item]);
+            self._remove();
+        })
+        .on('mouseover', function (e) {
+
+            var $item = $(e.target)
+                    .parent(DROPDOWN_ITEM_CLASS),
+                itemIndex = self.$el.find(DROPDOWN_ITEM_CLASS).index($item);
+
+            if (itemIndex !== -1) {
+                var item = self.items[itemIndex];
+                self._setActiveItems([item]);
+            }
+
+        });
+
+
+    $(document)
+        .one('click._onCloseHandler', this._onCloseHandler.bind(this))
+        .on('keydown._navHandler', this._navHandler.bind(this));
+};
+
+/**
+ * Set active items
+ * @param {Array} items - Active items
+ * @private
+ */
+YAD.prototype._setActiveItems = function (items) {
+    var self = this;
+    var $items = this.$el.find(DROPDOWN_ITEM_CLASS);
+
+    if ($items.length) {
+        $items.each(function (__, _item) {
+            $(_item).removeClass(DROPDOWN_ITEM_CLASS_ACTIVE);
+        });
+    }
+
+    items.forEach(function (item) {
+        $($items[self.items.indexOf(item)]).addClass(DROPDOWN_ITEM_CLASS_ACTIVE);
+    });
+
+    this.activeItems = items;
+
+};
+
+/**
+ * Items onClick handler. Onvokes onSelect.
+ * @param {Array} items - Active items
+ * @returns {boolean}
+ * @private
+ */
+YAD.prototype._onClickHandler = function (items) {
+    if (!items) {
+        return false;
+    }
+
+    this.selectedItems = items;
+
+    if (this._isFunction(this.params.onSelect)) {
+        this.params.onSelect(this.selectedItems);
+    }
+
+};
+
+/**
+ * onRemove handler ( this._remove() )
+ * @param {Event} e - Close event
+ * @private
+ */
+YAD.prototype._onCloseHandler = function _onCloseHandler(e) {
+    if (this.$el.has(e.target).length === 0) {
+        this._remove();
+    } else {
+        $(document).one('click', this._onCloseHandler.bind(this));
+    }
+};
+
+/**
+ * Navigation handler. Arrows, arrows + shift and TAB handler
+ * @param {Event} e
+ * @returns {void}
+ * @private
+ */
+YAD.prototype._navHandler = function (e) {
+
+    if(e.keyCode === TAB_KEYCODE) {
+        this._remove();
+     }
+
+    if (e.keyCode === UP_KEYCODE || e.keyCode === DOWN_KEYCODE) {
+
+        e.preventDefault();
+        var self = this,
+            result = [],
+            $items = this.$el.find(DROPDOWN_INNER_CLASS).children('.' + DROPDOWN_ITEM_CLASS_ACTIVE),
+            $prev = $items.prev(),
+            $next = $items.next(),
+            $siblings;
+
+        if ((e.keyCode === DOWN_KEYCODE &amp;&amp; !$next.length) || (e.keyCode === UP_KEYCODE &amp;&amp; !$prev.length)) {
+            return false;
+        }
+
+        if (!e.shiftKey || !this.params.multiple) {
+            $items.removeClass('active');
+        }
+
+        if (e.keyCode === UP_KEYCODE) {
+            $prev.addClass(DROPDOWN_ITEM_CLASS_ACTIVE);
+        }
+
+        if (e.keyCode === DOWN_KEYCODE) {
+            $next.addClass(DROPDOWN_ITEM_CLASS_ACTIVE);
+        }
+
+        $items = this.$el.find(DROPDOWN_INNER_CLASS).children();
+        $siblings = $items.siblings('.' + DROPDOWN_ITEM_CLASS_ACTIVE);
+
+        $siblings.each(function (i, s) {
+            result.push(self.items[$items.index(s)]);
+        });
+
+        if (!e.shiftKey &amp;&amp; self.activeItems.length > 1) {
+            this._setActiveItems([self.activeItems[0]]);
+            return false;
+        }
+
+        this._setActiveItems(result);
+    }
+};
+
+/**
+ * Helper.
+ * @param {Object} obj - May be a function
+ * @returns {boolean} - Is obj a function
+ * @private
+ */
+YAD.prototype._isFunction = function (obj) {
+    return Object.prototype.toString.call(obj) === '[object Function]';
+}
+
+
+/**
+ * Nested array unique
+ * @param {Array} arr - Array
+ * @param {Function} fn - Getting value by key
+ * @returns {Array} distinct - Unique array
+ * @private
+ */
+YAD.prototype._uniqueBy = function (arr, fn) {
+    var unique = {},
+        distinct = [];
+
+    arr.forEach(function (x) {
+        var key = fn(x);
+
+        if (!unique[key]) {
+            distinct.push(x);
+            unique[key] = true;
+        }
+    });
+
+    return distinct;
+};
+
+/**
+ * Throttle helper. Need for dataSource timeout.
+ * @param {Function} func - dataSource function
+ * @param {Number} wait - Timeout in the milliseconds
+ * @param {Object} options - Options. options.leading
+ * @returns {Function}
+ * @private
+ */
+YAD.prototype._throttle = function (func, wait, options) {
+    var context, args, result;
+    var timeout = null;
+    var previous = 0;
+    var _now = Date.now || function () {
+            return new Date().getTime();
+        };
+    options || (options = {});
+    var later = function () {
+        previous = options.leading === false ? 0 : _now();
+        timeout = null;
+        result = func.apply(context, args);
+        context = args = null;
+    };
+    return function () {
+        var now = _now();
+        if (!previous &amp;&amp; options.leading === false) previous = now;
+        var remaining = wait - (now - previous);
+        context = this;
+        args = arguments;
+        if (remaining &lt;= 0) {
+            clearTimeout(timeout);
+            timeout = null;
+            previous = now;
+            result = func.apply(context, args);
+            context = args = null;
+        } else if (!timeout &amp;&amp; options.trailing !== false) {
+            timeout = setTimeout(later, remaining);
+        }
+        return result;
+    };
+};</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Index</a></h2><h3>Classes</h3><ul><li><a href="YAD.html">YAD</a></li></ul>
+</nav>
+
+<br clear="both">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0-alpha5</a> on Fri May 29 2015 07:26:28 GMT+0300 (MSK)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
